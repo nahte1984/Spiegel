@@ -32,7 +32,7 @@
 <body>
 
     <div id="overlay">
-        <button id="start-btn">🔮 🔮 🔮</button>
+        <button id="start-btn">🔮  🔮</button>
     </div>
     
     <video id="video-feed" autoplay playsinline muted></video>
@@ -61,7 +61,7 @@
         async function setupCamera() {
             try {
                 const constraints = {
-                    video: { facingMode: { exact: "environment" } },
+                    video: { facingMode: "user" },
                     audio: false
                 };
                 // 嘗試強制後置鏡頭，若失敗則使用預設
@@ -93,7 +93,7 @@
             document.body.appendChild(renderer.domElement);
 
             // 燈光設定 (為了展現模型的光澤)
-            const ambientLight = new THREE.AmbientLight(0x2bfdff, 5.0);
+            const ambientLight = new THREE.AmbientLight(0x81fffb, 5.0);
             scene.add(ambientLight);
 
             const mainLight = new THREE.DirectionalLight(0xeaa2ff, 5.0);
