@@ -32,7 +32,7 @@
 <body>
 
     <div id="overlay">
-        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
+        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
     </div>
     
     <video id="video-feed" autoplay playsinline muted></video>
@@ -96,7 +96,7 @@
             const ambientLight = new THREE.AmbientLight(0x81fffb, 3.0);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xeaa2ff, 4.0);
+            const mainLight = new THREE.DirectionalLight(0xeaa2ff, 6.0);
             mainLight.position.set(5, 10, 7.5);
             scene.add(mainLight);
 
@@ -126,9 +126,9 @@
                         child.material = new THREE.MeshStandardMaterial({ 
                             map: videoTexture,
                             transparent: true,
-                            opacity: 0.6,
-                            metalness: 1.5, // 增加金屬質感
-                            roughness: 0.2, // 降低粗糙度讓光澤更明顯
+                            opacity: 0.5,
+                            metalness: 2.5, // 增加金屬質感
+                            roughness: 0.1, // 降低粗糙度讓光澤更明顯
                             side: THREE.DoubleSide
                         });
                     }
