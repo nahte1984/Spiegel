@@ -32,7 +32,7 @@
 <body>
 
     <div id="overlay">
-        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
+        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
     </div>
     
     <video id="video-feed" autoplay playsinline muted></video>
@@ -95,7 +95,7 @@
             // --- 燈光設定：極端反差與金屬質感 ---
 
                 // 1. 大幅降低環境光 (環境光會吃掉陰影，金屬感需要深色暗面)
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); 
+                const ambientLight = new THREE.AmbientLight(0xc209c9, 4); 
                 scene.add(ambientLight);
 
                 // 2. 主光源 (Key Light)：強烈的紫色光，從側面射入
@@ -105,14 +105,14 @@
 
                 // 3. 輪廓光 (Rim Light)：從後方或側後方射入的強光，勾勒出金屬邊緣
                 const rimLight = new THREE.SpotLight(0x81fffb, 20.0);
-                rimLight.position.set(-5, 5, -5);
+                rimLight.position.set(5, 5, 10);
                 rimLight.angle = 0.5;
                 rimLight.penumbra = 0.1; // 邊緣銳利化
                 scene.add(rimLight);
 
                 // 4. 補光 (Fill Light)：深藍色，確保暗面不至於完全漆黑，但保持冷色調
-                const pointLight = new THREE.PointLight(0x0000ff, 5.0);
-                pointLight.position.set(-5, -5, 5);
+                const pointLight = new THREE.PointLight(0xca00cc, 5.0);
+                pointLight.position.set(5, 5, 10);
                 scene.add(pointLight);
 
             // 控制器
@@ -134,8 +134,8 @@
                             map: videoTexture,
                             transparent: true,
                             opacity: 0.8,      // 稍微提高不透明度，金屬感會更重
-                            metalness: 1.0,    // 設為 1.0 達致完全金屬感
-                            roughness: 0.05,   // 極低粗糙度，產生像鏡面一樣的銳利亮點
+                            metalness: 2.0,    // 設為 1.0 達致完全金屬感
+                            roughness: 0.5,   // 極低粗糙度，產生像鏡面一樣的銳利亮點
                             side: THREE.DoubleSide,
                             emissive: 0x000000 // 確保沒有自發光干擾對比
                         });
