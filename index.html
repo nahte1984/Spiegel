@@ -32,7 +32,7 @@
 <body>
 
     <div id="overlay">
-        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
+        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
     </div>
     
     <video id="video-feed" autoplay playsinline muted></video>
@@ -57,6 +57,10 @@
 
         let scene, camera, renderer, controls, videoTexture, myModel;
 
+        // --- 新增：陀螺儀目標變數 ---
+        let gyroTargetX = 0;
+        let gyroTargetY = 0;
+
         // --- 1. 相機設定 (後置鏡頭) ---
         async function setupCamera() {
             try {
@@ -64,7 +68,6 @@
                     video: { facingMode: "user" },
                     audio: false
                 };
-                // 嘗試強制後置鏡頭，若失敗則使用預設
                 const stream = await navigator.mediaDevices.getUserMedia(constraints)
                     .catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }));
                 
@@ -72,54 +75,58 @@
                 return new Promise(resolve => video.onloadedmetadata = resolve);
             } catch (err) {
                 console.error("相機啟動失敗:", err);
-                alert("無法存取後置鏡頭，請檢查 HTTPS 設定與權限。");
+                alert("無法存取鏡頭，請檢查 HTTPS 設定與權限。");
             }
+        }
+
+        // --- 新增：處理陀螺儀數據 ---
+        function handleOrientation(event) {
+            // gamma 是左右傾斜，beta 是前後傾斜
+            // 將數值乘上一個極小的係數，確保移動是「微幅」的
+            gyroTargetX = (event.gamma || 0) * 0.005;
+            // 假設使用者拿手機大約是 45 度角，以此為中心點來計算偏移
+            gyroTargetY = ((event.beta || 0) - 45) * -0.005; 
         }
 
         // --- 2. Three.js 場景初始化 ---
         function initThree() {
-            // 場景與背景
             scene = new THREE.Scene();
             
-            // 攝影機
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 0, 1.5);
 
-            // 渲染器
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             document.body.appendChild(renderer.domElement);
 
-            // --- 燈光設定：極端反差與金屬質感 ---
+            // --- 燈光設定 ---
+            const ambientLight = new THREE.AmbientLight(0x003cff, 4); 
+            scene.add(ambientLight);
 
-                // 1. 大幅降低環境光 (環境光會吃掉陰影，金屬感需要深色暗面)
-                const ambientLight = new THREE.AmbientLight(0x003cff, 4); 
-                scene.add(ambientLight);
+            const mainLight = new THREE.DirectionalLight(0xeaa2ff, 10.0);
+            mainLight.position.set(5, 5, 2);
+            scene.add(mainLight);
 
-                // 2. 主光源 (Key Light)：強烈的紫色光，從側面射入
-                const mainLight = new THREE.DirectionalLight(0xeaa2ff, 10.0);
-                mainLight.position.set(5, 5, 2);
-                scene.add(mainLight);
+            const rimLight = new THREE.SpotLight(0x81fffb, 20.0);
+            rimLight.position.set(5, 5, 10);
+            rimLight.angle = 0.5;
+            rimLight.penumbra = 0.1; 
+            scene.add(rimLight);
 
-                // 3. 輪廓光 (Rim Light)：從後方或側後方射入的強光，勾勒出金屬邊緣
-                const rimLight = new THREE.SpotLight(0x81fffb, 20.0);
-                rimLight.position.set(5, 5, 10);
-                rimLight.angle = 0.5;
-                rimLight.penumbra = 0.1; // 邊緣銳利化
-                scene.add(rimLight);
+            const pointLight = new THREE.PointLight(0xca00cc, 5.0);
+            pointLight.position.set(5, 5, 10);
+            scene.add(pointLight);
 
-                // 4. 補光 (Fill Light)：深藍色，確保暗面不至於完全漆黑，但保持冷色調
-                const pointLight = new THREE.PointLight(0xca00cc, 5.0);
-                pointLight.position.set(5, 5, 10);
-                scene.add(pointLight);
-
-            // 控制器
+            // --- 修改：嚴格限制控制器的互動軸向 ---
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
+            controls.enableZoom = false; // 禁用雙指縮放
+            controls.enablePan = false;  // 禁用兩指平移
+            controls.minPolarAngle = Math.PI / 2; // 鎖定垂直仰角
+            controls.maxPolarAngle = Math.PI / 2; // 鎖定垂直俯角 (只能左右轉)
 
-            // 影片紋理
             videoTexture = new THREE.VideoTexture(video);
             videoTexture.colorSpace = THREE.SRGBColorSpace;
 
@@ -133,11 +140,11 @@
                         child.material = new THREE.MeshStandardMaterial({ 
                             map: videoTexture,
                             transparent: true,
-                            opacity: 0.8,      // 稍微提高不透明度，金屬感會更重
-                            metalness: 2.0,    // 設為 1.0 達致完全金屬感
-                            roughness: 0.5,   // 極低粗糙度，產生像鏡面一樣的銳利亮點
+                            opacity: 0.8,      
+                            metalness: 2.0,    
+                            roughness: 0.5,   
                             side: THREE.DoubleSide,
-                            emissive: 0x000000 // 確保沒有自發光干擾對比
+                            emissive: 0x000000 
                         });
                     }
                 });
@@ -146,6 +153,9 @@
                 const box = new THREE.Box3().setFromObject(myModel);
                 const center = box.getCenter(new THREE.Vector3());
                 myModel.position.sub(center);
+
+                // --- 新增：記錄模型的初始中心位置，供陀螺儀計算偏移用 ---
+                myModel.userData.basePosition = myModel.position.clone();
                 
                 scene.add(myModel);
             }, undefined, (error) => {
@@ -153,7 +163,8 @@
             });
 
             window.addEventListener('resize', onWindowResize);
-            animate();
+            // 啟動動畫時傳入時間參數
+            requestAnimationFrame(animate);
         }
 
         function onWindowResize() {
@@ -162,13 +173,29 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- 4. 動畫迴圈 ---
-        function animate() {
+        // --- 4. 動畫迴圈 (新增 time 參數) ---
+        function animate(time) {
             requestAnimationFrame(animate);
             
-            // 模型持續向右自轉 (繞 Y 軸)
             if (myModel) {
+                // 模型持續向右自動微幅自轉
                 myModel.rotation.y += 0.01;
+
+                // --- 修改 1：呼吸般的縮放效果 ---
+                // Math.sin 會隨著時間 (time) 在 -1 到 1 之間來回震盪
+                // 0.002 控制呼吸的快慢，0.03 控制放大的幅度
+                const scale = 1 + Math.sin(time * 0.002) * 0.03;
+                myModel.scale.set(scale, scale, scale);
+
+                // --- 修改 2：根據陀螺儀平滑移動位置 ---
+                if (myModel.userData.basePosition) {
+                    const baseX = myModel.userData.basePosition.x;
+                    const baseY = myModel.userData.basePosition.y;
+
+                    // 使用 0.1 的係數進行平滑插值 (Lerp)，讓移動像是有慣性的漂浮，不會抖動
+                    myModel.position.x += ((baseX + gyroTargetX) - myModel.position.x) * 0.1;
+                    myModel.position.y += ((baseY + gyroTargetY) - myModel.position.y) * 0.1;
+                }
             }
 
             if (controls) controls.update();
@@ -178,6 +205,22 @@
         // 事件觸發
         startBtn.addEventListener('click', async () => {
             await setupCamera();
+            
+            // --- 新增：請求 iOS 的陀螺儀權限 ---
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permissionState = await DeviceOrientationEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    }
+                } catch (error) {
+                    console.error("陀螺儀權限遭拒", error);
+                }
+            } else {
+                // 非 iOS 設備直接監聽
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+
             initThree();
             overlay.style.opacity = '0';
             setTimeout(() => overlay.style.display = 'none', 500);
