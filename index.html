@@ -32,7 +32,7 @@
 <body>
 
     <div id="overlay">
-        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
+        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
     </div>
     
     <video id="video-feed" autoplay playsinline muted></video>
@@ -92,20 +92,28 @@
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             document.body.appendChild(renderer.domElement);
 
-            // 燈光設定 (為了展現模型的光澤)
-            const ambientLight = new THREE.AmbientLight(0x81fffb, 3.0);
-            scene.add(ambientLight);
+            // --- 燈光設定：極端反差與金屬質感 ---
 
-            const mainLight = new THREE.DirectionalLight(0xeaa2ff, 4.0);
-            mainLight.position.set(5, 10, 7.5);
-            scene.add(mainLight);
+                // 1. 大幅降低環境光 (環境光會吃掉陰影，金屬感需要深色暗面)
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); 
+                scene.add(ambientLight);
 
-            const pointLight = new THREE.PointLight(0xd700ea, 1, 100);
-            pointLight.position.set(5, 10, 7.5);
-            scene.add(pointLight);
+                // 2. 主光源 (Key Light)：強烈的紫色光，從側面射入
+                const mainLight = new THREE.DirectionalLight(0xeaa2ff, 10.0);
+                mainLight.position.set(5, 5, 2);
+                scene.add(mainLight);
 
-            //const hemiLight = new THREE.HemisphereLight(0xe11ef3, 0x0d09c9, 0.75);
-            //scene.add(hemiLight);
+                // 3. 輪廓光 (Rim Light)：從後方或側後方射入的強光，勾勒出金屬邊緣
+                const rimLight = new THREE.SpotLight(0x81fffb, 20.0);
+                rimLight.position.set(-5, 5, -5);
+                rimLight.angle = 0.5;
+                rimLight.penumbra = 0.1; // 邊緣銳利化
+                scene.add(rimLight);
+
+                // 4. 補光 (Fill Light)：深藍色，確保暗面不至於完全漆黑，但保持冷色調
+                const pointLight = new THREE.PointLight(0x0000ff, 5.0);
+                pointLight.position.set(-5, -5, 5);
+                scene.add(pointLight);
 
             // 控制器
             controls = new OrbitControls(camera, renderer.domElement);
@@ -122,14 +130,14 @@
                 
                 myModel.traverse((child) => {
                     if (child.isMesh) {
-                        // 混合材質：50% 相機影像 + 50% 物理光澤
                         child.material = new THREE.MeshStandardMaterial({ 
                             map: videoTexture,
                             transparent: true,
-                            opacity: 0.6,
-                            metalness: 5, // 增加金屬質感
-                            roughness: 0.2, // 降低粗糙度讓光澤更明顯
-                            side: THREE.DoubleSide
+                            opacity: 0.8,      // 稍微提高不透明度，金屬感會更重
+                            metalness: 1.0,    // 設為 1.0 達致完全金屬感
+                            roughness: 0.05,   // 極低粗糙度，產生像鏡面一樣的銳利亮點
+                            side: THREE.DoubleSide,
+                            emissive: 0x000000 // 確保沒有自發光干擾對比
                         });
                     }
                 });
