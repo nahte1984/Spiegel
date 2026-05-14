@@ -32,7 +32,7 @@
 <body>
 
     <div id="overlay">
-        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
+        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
     </div>
     
     <video id="video-feed" autoplay playsinline muted></video>
@@ -83,9 +83,9 @@
         function handleOrientation(event) {
             // gamma 是左右傾斜，beta 是前後傾斜
             // 將數值乘上一個極小的係數，確保移動是「微幅」的
-            gyroTargetX = (event.gamma || 0) * 0.005;
+            gyroTargetX = (event.gamma || 0) * 0.002;
             // 假設使用者拿手機大約是 45 度角，以此為中心點來計算偏移
-            gyroTargetY = ((event.beta || 0) - 45) * -0.005; 
+            gyroTargetY = ((event.beta || 0) - 45) * -0.002; 
         }
 
         // --- 2. Three.js 場景初始化 ---
@@ -184,7 +184,7 @@
                 // --- 修改 1：呼吸般的縮放效果 ---
                 // Math.sin 會隨著時間 (time) 在 -1 到 1 之間來回震盪
                 // 0.002 控制呼吸的快慢，0.03 控制放大的幅度
-                const scale = 1 + Math.sin(time * 0.002) * 0.03;
+                const scale = 1 + Math.sin(time * 0.001) * 0.02;
                 myModel.scale.set(scale, scale, scale);
 
                 // --- 修改 2：根據陀螺儀平滑移動位置 ---
