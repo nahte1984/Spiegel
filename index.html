@@ -8,7 +8,7 @@
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
             overflow: hidden; 
-            background: radial-gradient(circle at center, #410f45 0%, #130614 100%);
+            background: radial-gradient(circle at center, #754e79 0%, #130614 100%);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         canvas { display: block; }
@@ -32,7 +32,7 @@
 <body>
 
     <div id="overlay">
-        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩 𝔪𝔦𝔯𝔯𝔬𝔯</button>
+        <button id="start-btn">𝔠𝔯𝔶𝔰𝔱𝔞𝔩🪞𝔪𝔦𝔯𝔯𝔬𝔯</button>
     </div>
     
     <video id="video-feed" autoplay playsinline muted></video>
@@ -93,16 +93,19 @@
             document.body.appendChild(renderer.domElement);
 
             // 燈光設定 (為了展現模型的光澤)
-            const ambientLight = new THREE.AmbientLight(0x81fffb, 1.0);
+            const ambientLight = new THREE.AmbientLight(0x81fffb, 3.0);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xeaa2ff, 2.0);
+            const mainLight = new THREE.DirectionalLight(0xeaa2ff, 4.0);
             mainLight.position.set(5, 10, 7.5);
             scene.add(mainLight);
 
             const pointLight = new THREE.PointLight(0xd700ea, 1, 100);
-            pointLight.position.set(5, 5, 5);
+            pointLight.position.set(5, 10, 7.5);
             scene.add(pointLight);
+
+            const hemiLight = new THREE.HemisphereLight(0xe11ef3, 0x0d09c9, 0.75);
+            scene.add(hemiLight);
 
             // 控制器
             controls = new OrbitControls(camera, renderer.domElement);
