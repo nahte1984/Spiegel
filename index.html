@@ -3,21 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🔮</title>
+    <title>Spiegel im Spiegel</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
-        canvas { display: block; }
-        #start-btn {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 20px 40px; background: #fff; border: none; border-radius: 50px;
-            font-weight: bold; cursor: pointer; z-index: 100; letter-spacing: 2px;
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
+        canvas { display: block; }
+        
+        /* 啟動介面 */
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.8); z-index: 100; transition: opacity 0.5s;
+        }
+        #start-btn {
+            padding: 20px 40px; background: #fff; color: #000;
+            border: none; border-radius: 50px; font-weight: bold;
+            font-size: 1rem; cursor: pointer; letter-spacing: 2px;
+            box-shadow: 0 0 30px rgba(255,255,255,0.2);
+        }
+        
         #video-feed { display: none; }
     </style>
 </head>
 <body>
 
-    <button id="start-btn">按下允許就對ㄌ</button>
+    <div id="overlay">
+        <button id="start-btn">🔮 🔮 🔮</button>
+    </div>
+    
     <video id="video-feed" autoplay playsinline muted></video>
 
     <script type="importmap">
@@ -35,92 +51,120 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
         const startBtn = document.getElementById('start-btn');
+        const overlay = document.getElementById('overlay');
         const video = document.getElementById('video-feed');
 
-        let scene, camera, renderer, controls, videoTexture;
+        let scene, camera, renderer, controls, videoTexture, myModel;
 
-        // --- 1. 初始化後置鏡頭 ---
+        // --- 1. 相機設定 (後置鏡頭) ---
         async function setupCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    // 強制呼叫後置鏡頭 (environment)
-                    video: { facingMode: { exact: "environment" } }, 
+                const constraints = {
+                    video: { facingMode: { exact: "environment" } },
                     audio: false
-                }).catch(() => {
-                    // 如果某些手機不支援 exact，則使用一般建議模式
-                    return navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                });
+                };
+                // 嘗試強制後置鏡頭，若失敗則使用預設
+                const stream = await navigator.mediaDevices.getUserMedia(constraints)
+                    .catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }));
                 
                 video.srcObject = stream;
-                video.play();
+                return new Promise(resolve => video.onloadedmetadata = resolve);
             } catch (err) {
-                alert("無法存取後置相機！請確認權限與 HTTPS。");
+                console.error("相機啟動失敗:", err);
+                alert("無法存取後置鏡頭，請檢查 HTTPS 設定與權限。");
             }
         }
 
-        // --- 2. 初始化場景 ---
+        // --- 2. Three.js 場景初始化 ---
         function initThree() {
+            // 場景與背景
             scene = new THREE.Scene();
+            
+            // 攝影機
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 0, 3);
+            camera.position.set(0, 0, 4);
 
+            // 渲染器
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
             document.body.appendChild(renderer.domElement);
 
+            // 燈光設定 (為了展現模型的光澤)
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            mainLight.position.set(5, 10, 7.5);
+            scene.add(mainLight);
+
+            // 控制器
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
 
-            // 建立 VideoTexture
+            // 影片紋理
             videoTexture = new THREE.VideoTexture(video);
             videoTexture.colorSpace = THREE.SRGBColorSpace;
 
-            // --- 3. 載入自定義模型 ---
+            // --- 3. 載入 GLB 模型 ---
             const loader = new GLTFLoader();
-            // 請將 'my_model.glb' 換成你上傳到伺服器或 GitHub 的路徑
             loader.load('crystal.glb', (gltf) => {
-                const model = gltf.scene;
+                myModel = gltf.scene;
                 
-                // 核心邏輯：遍歷模型的所有零件，並將相機影像貼上去
-                model.traverse((child) => {
+                myModel.traverse((child) => {
                     if (child.isMesh) {
-                        child.material = new THREE.MeshBasicMaterial({ 
+                        // 混合材質：50% 相機影像 + 50% 物理光澤
+                        child.material = new THREE.MeshStandardMaterial({ 
                             map: videoTexture,
-                            side: THREE.DoubleSide // 內外都看得到投影
+                            transparent: true,
+                            opacity: 0.5,
+                            metalness: 0.7, // 增加金屬質感
+                            roughness: 0.2, // 降低粗糙度讓光澤更明顯
+                            side: THREE.DoubleSide
                         });
                     }
                 });
 
-                scene.add(model);
-                
-                // 自動調整模型大小並置中
-                const box = new THREE.Box3().setFromObject(model);
+                // 自動居中模型
+                const box = new THREE.Box3().setFromObject(myModel);
                 const center = box.getCenter(new THREE.Vector3());
-                model.position.sub(center);
+                myModel.position.sub(center);
+                
+                scene.add(myModel);
             }, undefined, (error) => {
-                console.error('模型載入失敗', error);
+                console.error('模型載入錯誤:', error);
             });
 
+            window.addEventListener('resize', onWindowResize);
             animate();
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-
-        startBtn.addEventListener('click', async () => {
-            await setupCamera();
-            initThree();
-            startBtn.style.display = 'none';
-        });
-
-        window.addEventListener('resize', () => {
+        function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- 4. 動畫迴圈 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 模型持續向右自轉 (繞 Y 軸)
+            if (myModel) {
+                myModel.rotation.y += 0.01;
+            }
+
+            if (controls) controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // 事件觸發
+        startBtn.addEventListener('click', async () => {
+            await setupCamera();
+            initThree();
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
         });
     </script>
 </body>
