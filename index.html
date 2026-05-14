@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vibe Coding - 3D 實時相機投影</title>
+    <style>
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: #000;
+        }
+        canvas { display: block; }
+        
+        /* 啟動按鈕 */
+        #start-btn {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 20px 40px; background: #fff; border: none; border-radius: 50px;
+            font-weight: bold; cursor: pointer; z-index: 100;
+            letter-spacing: 2px; box-shadow: 0 0 30px rgba(255,255,255,0.4);
+        }
+
+        /* 隱藏原生影片標籤 */
+        #video-feed { display: none; }
+    </style>
+</head>
+<body>
+
+    <button id="start-btn">進入 3D 相機空間</button>
+    
+    <video id="video-feed" autoplay playsinline muted></video>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const startBtn = document.getElementById('start-btn');
+        const video = document.getElementById('video-feed');
+
+        let scene, camera, renderer, controls, mesh;
+
+        // --- 1. 初始化相機流 ---
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user" }, // 使用前置鏡頭，就像照鏡子
+                    audio: false
+                });
+                video.srcObject = stream;
+                video.play();
+            } catch (err) {
+                alert("無法存取相機！");
+                console.error(err);
+            }
+        }
+
+        // --- 2. 初始化 Three.js 場景 ---
+        function initThree() {
+            scene = new THREE.Scene();
+
+            // 攝影機：視野 75 度，距離物件 5 單位
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // 加上滑鼠/觸控控制，讓 user 可以旋轉物件
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            // --- 3. 建立 VideoTexture 並貼在模型上 ---
+            const texture = new THREE.VideoTexture(video);
+            texture.colorSpace = THREE.SRGBColorSpace; // 確保顏色準確
+
+            // 建立幾何體：環面扭結 (TorusKnot)
+            const geometry = new THREE.TorusKnotGeometry(1.5, 0.5, 200, 32);
+            
+            // 建立材質：使用 VideoTexture 作為地圖 (map)
+            const material = new THREE.MeshBasicMaterial({ map: texture });
+
+            mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- 4. 渲染循環 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 讓模型慢慢旋轉，展示所有角度的影像
+            if (mesh) {
+                mesh.rotation.y += 0.005;
+                mesh.rotation.x += 0.005;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // 點擊啟動
+        startBtn.addEventListener('click', async () => {
+            await setupCamera();
+            initThree();
+            startBtn.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
